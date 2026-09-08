@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Architecture & Research | PneumoVision AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫁</text></svg>">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="brand-logo">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4.5 12.5C4.5 7.5 8 4 12 4s7.5 3.5 7.5 8.5c0 4-2.5 7.5-6.5 7.5H11C7 20 4.5 16.5 4.5 12.5z"></path>
+                        <path d="M12 4v16"></path>
+                        <path d="M8 9a4 4 0 0 0 0 6"></path>
+                        <path d="M16 9a4 4 0 0 1 0 6"></path>
+                    </svg>
+                </div>
+                <span class="brand-text">PneumoVision AI</span>
+                <span class="brand-badge">Research & Architecture</span>
+            </a>
+
+            <nav class="nav-links" id="navLinks">
+                <a href="/" class="nav-item">Diagnostic Workspace</a>
+                <a href="/about" class="nav-item active">Hybrid Architecture</a>
+            </nav>
+
+            <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation">☰</button>
+        </div>
+    </header>
+
+    <main class="container" style="padding: 2.5rem 0 4rem;">
+
+        <div class="about-header">
+            <div class="hero-pill">
+                <span>Dual-Branch Feature Fusion Architecture</span>
+            </div>
+            <h1 class="hero-title" style="font-size: 2.5rem;">
+                Why Combine <span class="highlight">VGG16 & VGG19</span>?
+            </h1>
+            <p class="hero-desc">
+                In chest radiography, pneumonia presents with varying subtleties — from faint ground-glass haziness to dense consolidated opacities. Combining both architectures captures both intermediate spatial details and deeper semantic representations.
+            </p>
+        </div>
+
+        <!-- Architecture Flow Card -->
+        <div class="about-card">
+            <h2>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+                Deep Feature Extraction & Fusion Pipeline
+            </h2>
+            <p>
+                The input chest radiograph \((224 \times 224 \times 3)\) passes concurrently through frozen ImageNet pre-trained backbones of <strong>VGG16</strong> and <strong>VGG19</strong>. Each branch extracts rich feature representations which are dimensionally reduced via <code>GlobalAveragePooling2D</code> and concatenated into a unified \(1024\)-dimensional feature vector.
+            </p>
+
+            <div class="arch-flow-box">
+[Input Radiograph: 224x224x3]
+         ├───▶ [VGG16 Backbone (13 Conv Layers)] ───▶ [GlobalAvgPool2D (512-d)] ───┐
+         │                                                                         ▼
+         └───▶ [VGG19 Backbone (16 Conv Layers)] ───▶ [GlobalAvgPool2D (512-d)] ───▶ [Concatenate (1024-d)]
+                                                                                          │
+                                                                                          ▼
+                                                                             [Dense (128, ReLU)]
+                                                                                          │
+                                                                                          ▼
+                                                                             [Dropout (0.30 Rate)]
+                                                                                          │
+                                                                                          ▼
+                                                                             [Dense (1, Sigmoid Output)]
+                                                                             0: NORMAL | 1: PNEUMONIA
+            </div>
+
+            <p>
+                The classification head consists of a <strong>Dense (128 units, ReLU)</strong> layer with a <strong>Dropout (0.3)</strong> regularization layer to prevent co-adaptation of features, followed by a single Sigmoid neuron output calibrated against class-weighted binary crossentropy.
+            </p>
+        </div>
+
+        <!-- Training Strategy Card -->
+        <div class="about-card">
+            <h2>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 14 14"></polyline>
+                </svg>
+                Optimization & Data Imbalance Handling
+            </h2>
+            <p>
+                Medical imaging datasets typically suffer from significant class imbalance (unequal distribution between normal and infected cases). The training pipeline utilized:
+            </p>
+            <ul class="advice-list" style="margin-top: 1rem;">
+                <li><strong>Balanced Class Weighting (Scikit-Learn):</strong> Penalizes false negatives on pneumonia cases during backpropagation.</li>
+                <li><strong>Geometric Data Augmentation:</strong> Random rotations (\(\pm 15^\circ\)), zooming (\(0.2\)), width/height shifts (\(0.1\)), and horizontal flipping.</li>
+                <li><strong>Adaptive Learning Rate Schedule:</strong> <code>ReduceLROnPlateau</code> with factor \(0.2\) and patience \(3\) epochs down to \(1\text{e-}7\).</li>
+                <li><strong>Validation Checkpointing:</strong> Preserves only model weights achieving peak validation accuracy.</li>
+            </ul>
+        </div>
+
+        <!-- Explainable AI (Grad-CAM) Card -->
+        <div class="about-card">
+            <h2>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                Explainable AI: Gradient-Weighted Class Activation Mapping (Grad-CAM)
+            </h2>
+            <p>
+                To provide transparency and clinical trust, the model leverages <strong>Grad-CAM</strong>. The gradients of the target class score with respect to the final convolutional feature maps are pooled to compute neuron importance weights:
+            </p>
+            <p style="font-family: var(--font-mono); font-size: 0.9rem; color: #38BDF8; background: rgba(11, 17, 32, 0.7); padding: 0.75rem 1rem; border-radius: 0.5rem; margin: 1rem 0;">
+                \(L_{\text{Grad-CAM}}^{c} = \text{ReLU}\left(\sum_{k} \alpha_k^c A^k\right) \quad \text{where} \quad \alpha_k^c = \frac{1}{Z} \sum_{i} \sum_{j} \frac{\partial Y^c}{\partial A_{i,j}^k}\)
+            </p>
+            <p>
+                This highlights whether the neural network made its diagnostic assessment based on genuine pathological consolidation rather than irrelevant artifacts (such as medical clips, rib edges, or background noise).
+            </p>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <strong>PneumoVision AI</strong> &bull; Chest Radiography Research & Decision Support
+                </div>
+                <div>
+                    <a href="/" style="color: #38BDF8; font-weight: 600;">➔ Back to Diagnostic Workspace</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

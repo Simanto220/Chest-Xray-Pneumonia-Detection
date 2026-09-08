@@ -1,0 +1,28 @@
+﻿# Python & Byte-compiled / optimized files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+ENV/
+.env
+
+# Large Model weights (>100MB - exceeds GitHub limit)
+*.h5
+*.keras
+*.weights.h5
+*.ckpt
+*.pt
+*.pth
+
+# Temporary / Uploaded images
+static/uploads/*
+!static/uploads/.gitkeep
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

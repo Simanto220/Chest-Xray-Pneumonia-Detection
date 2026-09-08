@@ -1,0 +1,278 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{balance}
+\usepackage[caption=false,font=footnotesize]{subfig}
+
+% Rename Index Terms to Keywords
+\renewcommand\IEEEkeywordsname{Keywords}
+
+\begin{document}
+
+\title{Deep Learning-Based Hybrid Framework For Pneumonia Detection From Chest X-Ray Images with XAI And Real-time Web-interface\\
+\thanks{This research was supervised by Ali Azgar, Assistant Professor, Department of CSE, BUBT.}
+}
+
+\author{
+\IEEEauthorblockN{Faiza Hassan\textsuperscript{1}, Md. Rahad\textsuperscript{2}, Abdulla al Fayed Chowdhury\textsuperscript{3}, Md. Atiqur Rahaman\textsuperscript{4}, Nur Mohammed Simanto\textsuperscript{5}}
+\IEEEauthorblockA{\textit{Department of Computer Science and Engineering} \\
+\textit{Bangladesh University of Business and Technology (BUBT)}, Dhaka, Bangladesh \\
+Email: \textsuperscript{1}22235103280@cse.bubt.edu.bd, \textsuperscript{2}22235103285@cse.bubt.edu.bd, \textsuperscript{3}22235103289@cse.bubt.edu.bd, \\
+\textsuperscript{4}22235103653@cse.bubt.edu.bd, \textsuperscript{5}22235103656@cse.bubt.edu.bd}
+}
+
+\maketitle
+
+\begin{abstract}
+Pneumonia is still one of the biggest health threats in the world, especially for children and elderly people living in areas with limited medical resources. This study looks at different deep learning methods for detecting pneumonia from chest X-rays and tries to figure out which approach actually works best. We also test how preprocessing the images changes the results, and in the end we build an ensemble model that combines the strongest models together. Several architectures were tested on a chest X-ray dataset, including a custom CNN and pretrained models like VGG, ResNet, and DenseNet. Each model gave decent results on its own, but relying on just one model felt risky it could overfit to the dataset or give inconsistent predictions on new data. So the two best pretrained models were combined using soft voting, which helped reduce this variance and made the system more reliable overall. Both individual pretrained models—VGG16 and VGG19 achieved 95\% accuracy on the test set, while the proposed hybrid ensemble reached 94\% accuracy with a recall of 97\%, minimizing missed pneumonia cases. After that, the whole pipeline was put into a simple web app so predictions could be made instantly. The results suggest that combining transfer learning with an ensemble approach is a practical way to build screening tools that could actually be used in real clinical settings.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Pneumonia Detection, Deep Learning, Chest X-Ray, Ensemble Learning, Transfer Learning, Medical Imaging, Computer-Aided Diagnosis
+\end{IEEEkeywords}
+
+\section{INTRODUCTION}
+\label{sec:intro}
+Pneumonia remains a significant global health issue, particularly in developing regions, and is associated with high mortality rates \cite{who2025}. Although chest X-ray radiography is the most widely used and cost-effective tool for early detection, distinguishing between healthy lungs and infected opacities is often challenging owing to overlapping visual features and low contrast in radiological images. Currently, computer-aided diagnosis systems enhanced by deep learning are proving to be accurate in identifying pulmonary infections. However, manual interpretation by radiologists is time-consuming, subjective, and prone to human error, especially in overworked healthcare facilities. Moreover, the severe shortage of expert radiologists in rural or under-served regions leads to delayed treatment and adverse patient outcomes.
+
+Computer-aided diagnosis systems have revolutionized pneumonia screening, leading to faster and more reliable clinical decisions. Convolutional Neural Networks (CNNs) are particularly well suited for analyzing chest X-rays \cite{kaggle2021}, which helps detect and classify pulmonary lesions with high precision. Similarly, pretrained models such as VGG, ResNet, and DenseNet enhance classification accuracy by leveraging feature representations learned from large-scale visual benchmarks. Furthermore, ensemble methods that combine multiple deep architectures can significantly reduce variance and improve generalization during model validation.
+
+Despite these advancements, raw chest X-ray images present several challenges, including noise artifacts, varying resolutions, and poor contrast, which can degrade classification performance. Many traditional approaches rely on single-model architectures that suffer from limited cross-dataset generalizability or require complex setups that are difficult to deploy in real-world clinical workflows.
+
+\textbf{Key Contributions:}
+This paper contributes the following to automated pneumonia screening:
+\begin{itemize}
+    \item A preprocessing pipeline that cleans up raw chest X-rays through resizing, Gaussian noise removal, pixel normalization, and contrast enhancement—getting the images into optimal shape before any model sees them.
+    \item A comprehensive comparison of multiple transfer learning models (custom CNN, VGG16, VGG19, ResNet, and DenseNet) to evaluate individual diagnostic capabilities on pneumonia detection.
+    \item A hybrid ensemble framework that combines the two best-performing pretrained models (VGG16 and VGG19) via soft-voting probability aggregation, maximizing recall (97\%) and diagnostic stability.
+    \item Real-time Explainable AI (XAI) integration using Grad-CAM to visualize pathological lung opacities alongside an end-to-end web deployment for instant clinical decision support.
+\end{itemize}
+
+\textbf{Paper Organization:}
+The remaining part of this paper is organized as follows: Section II reviews related work on deep learning-based pneumonia detection. Section III describes the proposed methodology, including preprocessing, model training, and the hybrid ensemble framework. Section IV presents the results and discussion, covering model performance, confusion matrices, loss curves, XAI interpretability, and the web deployment. Finally, Section V concludes the paper and outlines directions for future work.
+
+\section{RELATED WORKS}
+\label{sec:related}
+The application of deep learning in medical imaging, specifically for pneumonia detection from chest X-rays, has seen significant exploration in recent years. However, many existing solutions struggle with cross-dataset generalization, computational overhead, or a lack of practical deployment frameworks. The following recent works highlight the current limitations in the field, which our proposed system aims to overcome:
+
+\begin{itemize}
+    \item \textbf{Ensemble Frameworks:} Kundu et al. \cite{kundu2021} proposed an ensemble deep learning framework using a weighted averaging strategy. While innovative, their model suffered from a lack of cross-domain generalization, achieving a peak test accuracy of 91.2\%, and lacked a deployable clinical interface.
+    
+    \item \textbf{Pediatric Datasets and Standardization:} Salehi et al. \cite{salehi2021} utilized transfer learning with DenseNet specifically on pediatric chest X-rays, achieving 89.5\% accuracy. Similarly, Chen et al. \cite{chen2021} focused on pediatric radiographs using standardized methodologies, reaching 90.3\% accuracy. Both were heavily optimized for specific data centers, limiting their broader applicability.
+    
+    \item \textbf{Attention Mechanisms:} Cha et al. \cite{cha2021} and Li \cite{li2024} introduced attention-based approaches, achieving accuracies of 92.1\% and 93.2\%, respectively. Although they improved feature extraction, the added attention mechanisms introduced severe computational overhead, making them unsuitable for resource-constrained environments.
+    
+    \item \textbf{Baseline Architectures:} Zhang et al. \cite{zhang2021} implemented a standard CNN, which capped at 88.7\% accuracy and exhibited high variance. Darapaneni et al. \cite{darapaneni2022} explored basic neural networks (90.5\% accuracy) but lacked robust preprocessing, resulting in higher false negative rates.
+    
+    \item \textbf{Complex Architectures and Localization:} Other studies explored QCSA networks \cite{qcsa2023}, viral pneumonia grading via region of interest localization \cite{viral2023}, and lung segmentation frameworks \cite{lungseg2023}. While achieving accuracies between 89\% and 92.8\%, their extreme architectural complexities hindered scalable web-based integration.
+\end{itemize}
+
+Collectively, these studies indicate that while single models and attention mechanisms push performance, they often do so at the cost of high computational demands and limited deployability. Our proposed optimized ensemble approach addresses these gaps directly.
+
+\section{METHODOLOGY}
+\label{sec:method}
+The proposed methodology follows a systematic, step-by-step pipeline designed to accurately detect pneumonia from chest X-ray images. The complete workflow, from initial data collection to final web deployment, is illustrated in Fig. \ref{fig:methodology} and detailed in the following subsections.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{METHODOLOGY THESIS.png}
+\caption{Overall Architecture and Methodology Pipeline for Pneumonia Detection Using Deep Transfer Learning, Ensemble Aggregation, XAI, and Web Deployment.}
+\label{fig:methodology}
+\end{figure}
+
+\subsection{Dataset Preparation and Preprocessing}
+We utilize the public Chest X-Ray dataset \cite{kaggle2021} containing labeled pediatric and adult anterior-posterior chest radiographs classified into two primary categories: Normal and Pneumonia.
+
+To ensure consistency and eliminate noise artifacts across varying imaging sources, each raw radiograph $I_{raw}$ undergoes an automated preprocessing pipeline:
+\begin{equation}
+I_{norm}(x,y) = \frac{I_{raw}(x,y) - \mu}{\sigma}
+\end{equation}
+where $\mu$ and $\sigma$ denote the mean and standard deviation of pixel intensities. Images are resized to a uniform spatial dimension of $224 \times 224$ pixels. Data augmentation techniques including random horizontal flips, subtle rotations ($\pm 10^\circ$), zoom variation, and width/height shifts are applied to enrich dataset diversity and prevent overfitting during gradient descent. The preprocessed dataset is strategically divided into three subsets: 70\% for training, 15\% for validation, and 15\% for unseen testing.
+
+\subsection{Deep Feature Extraction and Model Training}
+Transfer learning is leveraged using ImageNet pretrained weights. Prominent CNN architectures including VGG16, VGG19, ResNet50, and MobileNetV2 are adapted by replacing the top dense classification heads with custom fully connected layers, dropout regularization ($p=0.5$), and batch normalization:
+\begin{equation}
+z = \sigma \left( W_2 \cdot \text{ReLU}(W_1 f_{conv}(I) + b_1) + b_2 \right)
+\end{equation}
+where $f_{conv}(I)$ represents the high-level spatial feature map extracted by the convolutional base.
+
+\begin{algorithm}[!t]
+\caption{Proposed Hybrid Ensemble Diagnostic Pipeline}
+\label{alg:hybrid_ensemble}
+\begin{algorithmic}[1]
+\REQUIRE Input chest X-ray radiograph $I_{raw}$, Pretrained models $\mathcal{M}_{VGG16}$ and $\mathcal{M}_{VGG19}$, Decision threshold $\tau = 0.5$.
+\ENSURE Binary Diagnostic Label $Y \in \{\text{Normal}, \text{Pneumonia}\}$, Confidence $P_{ens}$, Grad-CAM Heatmap $H$.
+\STATE $I_{proc} \leftarrow \text{Preprocess}(I_{raw}, \text{target\_size}=(224,224))$
+\STATE $P_{16} \leftarrow \mathcal{M}_{VGG16}(I_{proc})$ \COMMENT{Class probability from VGG16}
+\STATE $P_{19} \leftarrow \mathcal{M}_{VGG19}(I_{proc})$ \COMMENT{Class probability from VGG19}
+\STATE $P_{ens} \leftarrow \frac{1}{2} \left( P_{16} + P_{19} \right)$ \COMMENT{Soft-voting probability fusion}
+\IF{$P_{ens} \ge \tau$}
+    \STATE $Y \leftarrow \text{``Pneumonia Detected''}$
+\ELSE
+    \STATE $Y \leftarrow \text{``Normal (No Pneumonia)''}$
+\ENDIF
+\STATE $H \leftarrow \text{ComputeGradCAM}(\mathcal{M}_{VGG16}, I_{proc})$
+\STATE Superimpose heatmap $H$ onto $I_{raw}$
+\RETURN $Y$, $P_{ens}$, $H$
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Hybrid Ensemble Strategy}
+Upon evaluating baseline models across validation sets, VGG16 and VGG19 demonstrated superior diagnostic discriminability. To combine their complementary strengths and reduce individual prediction variance, we construct a hybrid ensemble via soft-voting probability aggregation. The aggregated probability $P_{ens}(y=c \mid I)$ for class $c$ is computed as:
+\begin{equation}
+P_{ens}(y=c \mid I) = \frac{1}{2} \left[ P_{VGG16}(y=c \mid I) + P_{VGG19}(y=c \mid I) \right]
+\end{equation}
+The ensemble decision optimizes the true positive rate, substantially decreasing dangerous false-negative clinical diagnoses.
+
+\subsection{Explainable AI (XAI) with Grad-CAM}
+To foster clinical trustworthiness, Gradient-weighted Class Activation Mapping (Grad-CAM) is integrated into the inference phase. Grad-CAM computes the gradient of the classification score $y^c$ with respect to the feature activation map $A^k$ of the final convolutional layer:
+\begin{equation}
+\alpha_k^c = \frac{1}{Z} \sum_{i} \sum_{j} \frac{\partial y^c}{\partial A_{i,j}^k}
+\end{equation}
+\begin{equation}
+L_{\text{Grad-CAM}}^c = \text{ReLU}\left( \sum_k \alpha_k^c A^k \right)
+\end{equation}
+The resulting coarse localization heatmap highlights anatomical regions containing opacities and pulmonary infiltrates.
+
+\section{RESULTS AND DISCUSSION}
+\label{sec:results}
+In this section, we present a comprehensive evaluation of the individual deep learning architectures and the proposed hybrid ensemble model.
+
+\subsection{Model Performance Summary}
+As detailed in the performance summary in Table \ref{tab:model_summary} and Fig. \ref{fig:summary_table}, VGG16 and VGG19 emerged as the top two individual performers, both achieving an overall accuracy of 95\%. Our proposed hybrid ensemble achieved an overall accuracy of 94\% alongside an outstanding recall rate of 97\%. In computer-aided medical diagnostics, maximizing recall is paramount because false negatives (failing to identify an infected patient) carry severe clinical risks.
+
+\begin{table}[!t]
+\caption{Quantitative Performance Comparison of Evaluated Models on Test Set}
+\label{tab:model_summary}
+\centering
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model Architecture} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1-Score} \\
+\midrule
+Custom CNN & 0.88 & 0.86 & 0.89 & 0.87 \\
+ResNet50 & 0.91 & 0.90 & 0.92 & 0.91 \\
+DenseNet121 & 0.92 & 0.91 & 0.93 & 0.92 \\
+MobileNetV2 & 0.89 & 0.88 & 0.90 & 0.89 \\
+VGG16 & \textbf{0.95} & 0.94 & 0.96 & \textbf{0.95} \\
+VGG19 & \textbf{0.95} & \textbf{0.95} & 0.95 & \textbf{0.95} \\
+\midrule
+\textbf{Proposed Hybrid Ensemble} & 0.94 & 0.92 & \textbf{0.97} & 0.94 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Screenshot 2026-08-14 111618.png}
+\caption{Summary Table of Model Evaluation Metrics across 20 Epochs.}
+\label{fig:summary_table}
+\end{figure}
+
+\subsection{Confusion Matrices Analysis}
+We analyzed the confusion matrices of the top two individual models alongside our hybrid model. As illustrated in Fig. \ref{fig:confusion_matrices}, the hybrid ensemble effectively balances the predictive power of its base models, maintaining a highly robust true positive rate while suppressing false negative misclassifications.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[VGG16 Model]{\includegraphics[width=0.32\textwidth]{vgg16 confusion.png}\label{fig:cm_vgg16}}
+\hfill
+\subfloat[VGG19 Model]{\includegraphics[width=0.32\textwidth]{vgg19confusion.png}\label{fig:cm_vgg19}}
+\hfill
+\subfloat[Proposed Hybrid Ensemble]{\includegraphics[width=0.32\textwidth]{confusion matrix of hybrid.png}\label{fig:cm_hybrid}}
+\caption{Confusion Matrix Analysis on the Test Set: (a) VGG16 Model, (b) VGG19 Model, and (c) Proposed Hybrid Ensemble Model demonstrating elevated sensitivity and minimal false negative classifications.}
+\label{fig:confusion_matrices}
+\end{figure*}
+
+\subsection{Training and Validation Loss Convergence}
+Fig. \ref{fig:loss_curves} visualizes the training and validation loss curves across training epochs. The steady convergence of both training and validation losses across all architectures confirms that the models successfully learned generalizable anatomical features without suffering from severe variance or divergence.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[VGG16 Loss Curve]{\includegraphics[width=0.32\textwidth]{vgg16_loss.png}\label{fig:loss_vgg16}}
+\hfill
+\subfloat[VGG19 Loss Curve]{\includegraphics[width=0.32\textwidth]{vgg19_loss.png}\label{fig:loss_vgg19}}
+\hfill
+\subfloat[Hybrid Ensemble Loss Curve]{\includegraphics[width=0.32\textwidth]{hybrid_loss.png}\label{fig:loss_hybrid}}
+\caption{Training and Validation Loss Convergence Curves across Epochs: (a) VGG16 Architecture, (b) VGG19 Architecture, and (c) Proposed Hybrid Ensemble Model.}
+\label{fig:loss_curves}
+\end{figure*}
+
+\subsection{Explainable AI (XAI) Visualization}
+To ensure transparency and interpretability in our diagnostic system, we integrated Gradient-weighted Class Activation Mapping (Grad-CAM). As shown in Fig. \ref{fig:xai_heatmap}, the Grad-CAM visualization generates a heatmap over the original chest X-ray, highlighting the specific regions of the lungs that the hybrid model focused on to make its prediction. This explainability is crucial for clinical acceptance, as it allows medical professionals to verify that the model is identifying genuine pathological features rather than background noise.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=0.85\columnwidth]{xai_image.png}
+\caption{Explainable AI (Grad-CAM) heatmap highlighting the infected lung regions detected by the model.}
+\label{fig:xai_heatmap}
+\end{figure}
+
+\subsection{Clinical Web Deployment}
+The finalized hybrid model was integrated into a responsive web-based diagnostic interface. As depicted in Fig. \ref{fig:web_deployment}(a), users can easily upload an unseen chest X-ray image for instant analysis. Following upload, Fig. \ref{fig:web_deployment}(b) illustrates the interface successfully detecting a positive case with confidence scoring. Conversely, Fig. \ref{fig:web_deployment}(c) demonstrates the system accurately analyzing a healthy lung (Normal). This lightweight web pipeline ensures accessible diagnostic support in resource-constrained environments.
+
+\begin{figure*}[!t]
+\centering
+\subfloat[Upload Interface]{\includegraphics[width=0.32\textwidth]{web_upload.png}\label{fig:web_upload}}
+\hfill
+\subfloat[Pneumonia Detected Output]{\includegraphics[width=0.32\textwidth]{pneumonia_detected.png}\label{fig:web_pneumonia}}
+\hfill
+\subfloat[Normal Case Detected Output]{\includegraphics[width=0.32\textwidth]{normal_detected.png}\label{fig:web_normal}}
+\caption{End-to-End Clinical Web Diagnostic Interface: (a) Image Upload Module, (b) Positive Prediction Screen (Pneumonia Detected), and (c) Negative Prediction Screen (Normal / No Infection).}
+\label{fig:web_deployment}
+\end{figure*}
+
+\section{CONCLUSION}
+\label{sec:conclusion}
+Diagnosing pneumonia quickly and accurately remains a critical challenge in regions with limited radiological expertise. In this paper, we presented an end-to-end deep learning framework that automatically classifies chest X-ray images as normal or pneumonia-affected. By combining an automated preprocessing pipeline with a hybrid ensemble of top-performing VGG16 and VGG19 architectures, the proposed system attained an outstanding 97\% recall rate and 94\% overall accuracy. Prioritizing recall significantly minimizes dangerous false-negative cases, making the framework well suited for clinical screening. Furthermore, the integration of Grad-CAM visual explanations and a real-time web interface bridges the gap between deep learning research and practical clinical utility. Future work will explore multi-class viral vs. bacterial pneumonia subtyping, lightweight mobile quantization, and cross-center clinical validation.
+
+\balance
+
+\begin{thebibliography}{10}
+
+\bibitem{who2025}
+World Health Organization, ``Pneumonia,'' 2025. [Online]. Available: https://en.wikipedia.org/wiki/Pneumonia
+
+\bibitem{kaggle2021}
+T. Dincer, ``Labeled Chest X-ray Images,'' Kaggle, 2021. [Online]. Available: https://www.kaggle.com/datasets/tolgadincer/labeled-chest-xray-images
+
+\bibitem{kundu2021}
+R. Kundu, R. Das, Z. W. Geem, G.-T. Han, and R. Sarkar, ``Pneumonia detection in chest X-ray images using an ensemble of deep learning models,'' \textit{PLOS ONE}, vol. 16, no. 9, p. e0256630, 2021.
+
+\bibitem{salehi2021}
+M. Salehi, R. Mohammadi, H. Ghaffari, N. Sadighi, and R. Reiazi, ``Automated detection of pneumonia cases using deep transfer learning with paediatric chest X-ray images,'' \textit{British Journal of Radiology}, vol. 94, no. 1118, p. 20201263, 2021.
+
+\bibitem{chen2021}
+Y. Chen et al., ``Deep learning for classification of pediatric chest radiographs by WHO's standardized methodology,'' \textit{PLOS ONE}, vol. 16, no. 6, p. e0253239, 2021.
+
+\bibitem{cha2021}
+S.-M. Cha, S.-S. Lee, and B. Ko, ``Attention-based transfer learning for efficient pneumonia detection in chest X-ray images,'' \textit{Applied Sciences}, vol. 11, no. 3, p. 1242, 2021.
+
+\bibitem{zhang2021}
+D. Zhang, F. Ren, Y. Li, L. Na, and Y. Ma, ``Pneumonia detection from chest X-ray images based on convolutional neural network,'' \textit{Electronics}, vol. 10, no. 13, p. 1512, 2021.
+
+\bibitem{darapaneni2022}
+N. Darapaneni et al., ``Pneumonia detection in chest X-rays using neural networks,'' \textit{arXiv preprint arXiv:2204.03618}, 2022.
+
+\bibitem{qcsa2023}
+Anonymous, ``Pneumonia detection with QCSA network on chest X-ray,'' \textit{Scientific Reports}, vol. 13, p. 9318, 2023.
+
+\bibitem{viral2023}
+Anonymous, ``Automated grading of chest X-ray images for viral pneumonia with convolutional neural networks ensemble and region of interest localization,'' \textit{PLOS ONE}, vol. 18, no. 1, p. e0280352, 2023.
+
+\bibitem{lungseg2023}
+Anonymous, ``Transfer learning-based lung segmentation and pneumonia detection for chest X-ray images,'' \textit{International Journal of Innovative Computing and Applications}, vol. 14, no. 3, pp. 198--210, 2023.
+
+\bibitem{li2024}
+X. Li, ``Attention-enhanced architecture for pneumonia detection,'' \textit{BMC Medical Imaging}, vol. 24, p. 11, 2024.
+
+\end{thebibliography}
+
+\end{document}

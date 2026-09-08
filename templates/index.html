@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PneumoVision AI | Chest X-Ray Pneumonia Detection (VGG16 + VGG19 Hybrid)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫁</text></svg>">
+</head>
+<body>
+
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+        <div class="container nav-container">
+            <a href="/" class="brand-logo">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4.5 12.5C4.5 7.5 8 4 12 4s7.5 3.5 7.5 8.5c0 4-2.5 7.5-6.5 7.5H11C7 20 4.5 16.5 4.5 12.5z"></path>
+                        <path d="M12 4v16"></path>
+                        <path d="M8 9a4 4 0 0 0 0 6"></path>
+                        <path d="M16 9a4 4 0 0 1 0 6"></path>
+                    </svg>
+                </div>
+                <span class="brand-text">PneumoVision AI</span>
+                <span class="brand-badge">VGG16 + VGG19 Hybrid</span>
+            </a>
+
+            <nav class="nav-links" id="navLinks">
+                <a href="/" class="nav-item active">Diagnostic Workspace</a>
+                <a href="/about" class="nav-item">Hybrid Architecture</a>
+                <a href="#samples" class="nav-item">Sample X-Rays</a>
+                <a href="#features" class="nav-item">Clinical Features</a>
+            </nav>
+
+            <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle navigation">☰</button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="container">
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div style="margin-top: 1.5rem;">
+                    {% for category, message in messages %}
+                        <div style="padding: 1rem 1.5rem; border-radius: 0.75rem; margin-bottom: 1rem; font-weight: 600; 
+                            background: {% if category == 'danger' %}rgba(239, 68, 68, 0.15){% else %}rgba(245, 158, 11, 0.15){% endif %};
+                            border: 1px solid {% if category == 'danger' %}rgba(239, 68, 68, 0.4){% else %}rgba(245, 158, 11, 0.4){% endif %};
+                            color: {% if category == 'danger' %}#FCA5A5{% else %}#FDE68A{% endif %};">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-pill">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="9" opacity="0.2"></circle>
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 15h-2v-6h2zm0-8h-2V7h2z"></path>
+                </svg>
+                <span>Deep Feature Fusion & Explainable AI (Grad-CAM)</span>
+            </div>
+
+            <h1 class="hero-title">
+                Automated Pneumonia Detection from <br>
+                <span class="highlight">Chest Radiographs (CXR)</span>
+            </h1>
+
+            <p class="hero-desc">
+                Leveraging an advanced ensemble of <strong>VGG16</strong> and <strong>VGG19</strong> deep convolutional networks with Grad-CAM visual heatmaps to deliver fast, highly accurate, and transparent radiological assessments.
+            </p>
+        </section>
+
+        <!-- Diagnostic Workspace / Upload Card -->
+        <section class="workspace-card">
+            <form id="uploadForm" action="/predict" method="POST" enctype="multipart/form-data">
+                <div class="upload-dropzone" id="dropzone">
+                    <div class="dropzone-icon-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3 class="dropzone-title">Drag & Drop Chest X-Ray Image Here</h3>
+                    <p class="dropzone-hint">Supports DICOM-converted JPG, PNG, TIFF radiograph images (Up to 25MB)</p>
+                    
+                    <input type="file" name="file" id="fileInput" class="file-input-hidden" accept="image/*" required>
+                    <button type="button" class="btn-select-file" onclick="document.getElementById('fileInput').click()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                            <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        Browse Files
+                    </button>
+                </div>
+
+                <!-- Live Preview State -->
+                <div class="preview-container" id="previewContainer">
+                    <div class="preview-grid">
+                        <img id="previewThumb" class="preview-thumb" src="" alt="Selected Radiograph">
+                        <div class="preview-details">
+                            <div class="preview-filename" id="previewFilename">xray_scan.jpg</div>
+                            <div class="preview-meta" id="previewFilesize">-- KB</div>
+                            <div style="font-size: 0.8rem; color: #38BDF8; margin-top: 0.25rem;">
+                                Target Preprocessing: 224×224 RGB (VGG16 Preprocess Standard)
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="btn-submit-predict">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Run Diagnostic Analysis & Grad-CAM Heatmap
+                    </button>
+                </div>
+            </form>
+
+            <!-- 1-Click Sample Testing -->
+            <div class="samples-section" id="samples">
+                <div class="samples-header">
+                    <div class="samples-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Quick Test With Sample Radiographs:
+                    </div>
+                </div>
+
+                <div class="samples-grid">
+                    <a href="/predict_sample/pneumonia" class="sample-card pneumonia">
+                        <div class="sample-icon">🫁</div>
+                        <div class="sample-info">
+                            <h4>Pneumonia Positive Scan</h4>
+                            <p>Right lower lobe opacity & consolidation</p>
+                        </div>
+                        <div class="sample-btn">Test Scan ➔</div>
+                    </a>
+
+                    <a href="/predict_sample/normal" class="sample-card normal">
+                        <div class="sample-icon">✨</div>
+                        <div class="sample-info">
+                            <h4>Normal Healthy Scan</h4>
+                            <p>Clear bilateral pulmonary fields</p>
+                        </div>
+                        <div class="sample-btn">Test Scan ➔</div>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Grid -->
+        <section id="features" class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                </div>
+                <h3>Dual-Branch Hybrid Fusion</h3>
+                <p>Combines multi-scale feature representations from VGG16 (spatial patterns) and VGG19 (deeper semantic abstraction) to minimize false negatives in subtle opacities.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                    </svg>
+                </div>
+                <h3>Explainable AI (Grad-CAM)</h3>
+                <p>Highlights pathological regions directly on the radiograph using gradient-weighted class activation mapping, providing full visual transparency for clinical validation.</p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-wrap">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                </div>
+                <h3>Clinical Advice & Reporting</h3>
+                <p>Generates actionable recommendations (biomarkers, oxygenation, microbiology workup, follow-up imaging) and printable diagnostic summary reports.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div>
+                    <strong>PneumoVision AI</strong> &bull; Chest Radiography Diagnostic Decision Support
+                </div>
+                <div>
+                    Active Model Engine: <span style="color: #38BDF8; font-family: var(--font-mono);">{{ model_name }}</span>
+                </div>
+            </div>
+
+            <div class="disclaimer-box">
+                ⚠️ <strong>Clinical AI Notice:</strong> This software is an experimental deep learning diagnostic decision support system designed for research and educational purposes. All outputs must be correlated with clinical history and reviewed by a certified medical specialist before making therapeutic decisions.
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
