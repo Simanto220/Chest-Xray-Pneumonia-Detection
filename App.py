@@ -7,6 +7,7 @@ import cv2
 from PIL import Image
 
 import tensorflow as tf
+import keras
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications import VGG16, VGG19
 from tensorflow.keras.applications.vgg16 import preprocess_input
@@ -72,21 +73,28 @@ def load_trained_model():
         if os.path.exists(path):
             try:
                 print(f"[*] Loading model from: {path}")
-                model = tf.keras.models.load_model(path, compile=False)
+                model = keras.models.load_model(path, compile=False)
                 model_loaded_name = name
-                print(f"[+] Successfully loaded: {name}")
+                print(f"[+] Successfully loaded trained model: {name}")
                 return
             except Exception as e:
-                print(f"[!] Warning: Failed loading {name} directly: {e}")
+                print(f"[!] Warning: keras.models.load_model failed: {e}")
                 try:
-                    # Try loading weights into fresh hybrid architecture
-                    model = build_hybrid_architecture()
-                    model.load_weights(path)
-                    model_loaded_name = f"{name} (Weights Loaded)"
-                    print(f"[+] Loaded weights into Hybrid Model from {name}")
+                    model = tf.keras.models.load_model(path, compile=False)
+                    model_loaded_name = name
+                    print(f"[+] Successfully loaded via tf.keras: {name}")
                     return
-                except Exception as e2:
-                    print(f"[!] Failed loading weights: {e2}")
+                except Exception as e_tf:
+                    print(f"[!] tf.keras failed: {e_tf}")
+                    try:
+                        # Try loading weights into fresh hybrid architecture
+                        model = build_hybrid_architecture()
+                        model.load_weights(path)
+                        model_loaded_name = f"{name} (Weights Loaded)"
+                        print(f"[+] Loaded weights into Hybrid Model from {name}")
+                        return
+                    except Exception as e2:
+                        print(f"[!] Failed loading weights: {e2}")
 
     print("[*] No saved weights found yet. Initializing VGG16 + VGG19 Hybrid Model structure...")
     model = build_hybrid_architecture()
